@@ -491,20 +491,30 @@ async function loadData() {
 // ─── CSV PARSER ──────────────────────────────────────────────────────────────
 function parseCSV(text) {
   const rows = [];
-  const re = /("(?:[^"]|"")*"|[^,\r\n]*)/g;
-  let row = [];
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    let v = m[1];
-    if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1,-1).replace(/""/g, '"');
-    row.push(v.trim());
-    // Check if next char is newline
-    const next = text[re.lastIndex];
-    if (next === '\n' || next === '\r' || re.lastIndex >= text.length) {
-      rows.push(row);
-      row = [];
-      if (next === '\r' && text[re.lastIndex+1] === '\n') re.lastIndex++;
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const row = [];
+    let i = 0;
+    while (i < line.length) {
+      if (line[i] === '"') {
+        let val = '';
+        i++;
+        while (i < line.length) {
+          if (line[i] === '"' && line[i+1] === '"') { val += '"'; i += 2; }
+          else if (line[i] === '"') { i++; break; }
+          else { val += line[i++]; }
+        }
+        row.push(val.trim());
+        if (line[i] === ',') i++;
+      } else {
+        const end = line.indexOf(',', i);
+        if (end === -1) { row.push(line.slice(i).trim()); break; }
+        row.push(line.slice(i, end).trim());
+        i = end + 1;
+      }
     }
+    rows.push(row);
   }
   return rows;
 }
